@@ -1,6 +1,6 @@
 const { Client } = require('pg');
 
-const { hashPassword } = require('./utils.js');
+const { hashPassword } = require('../utils/utils.js');
 
 const connectionString = 'postgres://localhost:5432/quotes';
 const client = new Client({ connectionString });

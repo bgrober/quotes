@@ -2,7 +2,8 @@ const { Router } = require('express');
 const { createUser, getUser } = require('../db/users.js');
 const { createQuote, getQuotes, getHeardBy } = require('../db/quotes.js');
 const { verifyToken, signToken } = require('../middlewares/verify_token.js');
-const { comparePassword } = require('../db/utils.js');
+const { validatePhoneNumber } = require('../middlewares/validate_phone.js');
+const { comparePassword } = require('../utils/utils.js');
 
 const router = Router();
 
@@ -18,7 +19,7 @@ router.get('/login', (req, res) => {
 });
 
 // POST Login
-router.post('/login', async (req, res) => {
+router.post('/login', validatePhoneNumber, async (req, res) => {
   const data = {
     id: req.body.phone,
     password: req.body.password,
@@ -44,7 +45,7 @@ router.get('/create', (req, res) => {
 });
 
 // Register User
-router.post('/register', async (req, res) => {
+router.post('/register', validatePhoneNumber, async (req, res) => {
   const data = {
     id: req.body.phone,
     name: req.body.name,
