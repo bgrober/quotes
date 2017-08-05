@@ -27,7 +27,6 @@ const getQuotes = async (id) => {
 };
 
 const getHeardBy = async (id) => {
-  console.log('heard by', id);
   const query = {
     text: 'SELECT * from quotes where heard_by like $1',
     values: [`%${id}%`],
@@ -39,7 +38,6 @@ const getHeardBy = async (id) => {
 };
 
 const search = async (id, text) => {
-  console.log('search', id, text);
   const query = {
     text: 'SELECT * from quotes where (heard_by like $1 OR said_by=$1) AND text like $2',
     values: [`%${id}%`, `%${text}%`],
@@ -50,4 +48,4 @@ const search = async (id, text) => {
   return quotes.rows;
 };
 
-module.exports = { createQuote, getQuotes, getHeardBy };
+module.exports = { createQuote, getQuotes, getHeardBy, search };

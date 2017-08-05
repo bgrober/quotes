@@ -28,7 +28,6 @@ router.post('/login', async (req, res) => {
     const compared = await comparePassword(data.password, user.password);
     if (compared) {
       const token = await signToken({ id: user.id });
-      console.log(token);
       res.redirect(`/profile?token=${token}`);
     } else {
       res.sendStatus(403);
@@ -57,36 +56,34 @@ router.post('/register', async (req, res) => {
     const token = await signToken(id);
     res.redirect(`/profile?token=${token}`);
   } catch (err) {
+    console.log(err);
     res.sendStatus(500);
   }
 });
 
 // Login User
 router.get('/profile', verifyToken, async (req, res) => {
-  console.log("in profile");
   const id = req.body.decoded.id;
 
   try {
     const user = await getUser(id);
-    console.log("RENDERING PROFILE");
     res.render('profile', {
       user,
       token: req.query.token,
       said_by_link: `/said_by?token=${req.query.token}`,
     });
   } catch (err) {
+    console.log(err);
     res.sendStatus(500);
   }
 });
 
 // Get User's Quotes
 router.get('/said_by', verifyToken, async (req, res) => {
-  console.log("in said_by");
   const id = req.body.decoded.id;
 
   try {
     const quotes = await getQuotes(id);
-    console.log(quotes);
     res.render('said_by', {
       quotes,
       token: req.query.token,
@@ -99,12 +96,10 @@ router.get('/said_by', verifyToken, async (req, res) => {
 
 // Get User's Heard By
 router.get('/heard_by', verifyToken, async (req, res) => {
-  console.log("in heard_by");
   const id = req.body.decoded.id;
 
   try {
     const quotes = await getHeardBy(id);
-    console.log(quotes);
     res.render('said_by', {
       quotes,
       token: req.query.token,
@@ -125,7 +120,6 @@ router.post('/speak', verifyToken, async (req, res) => {
 
   try {
     createQuote(data);
-    const user = await getUser(data.said_by);
     res.redirect(`/profile?token=${req.body.token}`);
   } catch (err) {
     console.log(err);
