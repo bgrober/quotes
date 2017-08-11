@@ -8,35 +8,31 @@ const { comparePassword } = require('../utils/utils.js');
 const router = Router();
 
 
-// GET home page.
+// GET status check.
 router.get('/', (req, res) => {
-  res.render('index');
-});
-
-// Login Page
-router.get('/login', (req, res) => {
-  res.render('login');
+  res.send('ok');
 });
 
 // POST Login
+// POST endpoint for users to login.
+// This will validate the phone number, validate the password and then 
+// respond with the user information and a session token.
 router.post('/login', validatePhoneNumber, async (req, res) => {
-  const data = {
-    id: req.body.phone,
-    password: req.body.password,
+  const id = req.body.id;
+  const password = req.body.password;
+  const user = await getUser(id);
+  const compared = await comparePassword(password, user.password);
+  if (compared) {
+  const token = await signToken({ id: user.id });
+    res.send({ 
+      token, 
+      user: {
+        id: id
+      }
+    });
+  } else {
+    res.sendStatus(403);
   };
-  try {
-    const user = await getUser(data.id);
-    const compared = await comparePassword(data.password, user.password);
-    if (compared) {
-      const token = await signToken({ id: user.id });
-      res.redirect(`/profile?token=${token}`);
-    } else {
-      res.sendStatus(403);
-    }
-  } catch (err) {
-    console.log(err);
-    res.sendStatus(500);
-  }
 });
 
 // New User Page
