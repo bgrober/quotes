@@ -10,7 +10,7 @@ const router = Router();
 
 // GET status check.
 router.get('/', (req, res) => {
-  res.send('ok');
+  res.sendStatus(200);
 });
 
 // POST Login
