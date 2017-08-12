@@ -14,8 +14,12 @@ const createUser = async (data) => {
     text: 'INSERT INTO users(id, name, password) VALUES($1, $2, $3) RETURNING id',
     values: [data.id, data.name, hashedPassword],
   };
-const result = await client.query(query);
-  return result.rows[0];
+  try {
+    const result = await client.query(query);
+    return result.rows[0];
+  } catch (err) {
+    throw err
+  }
 };
 
 const getUser = async (id) => {
@@ -24,14 +28,19 @@ const getUser = async (id) => {
     values: [id],
   };
 
-  const user = await client.query(query);
-
-  return user.rows[0];
+  try {
+    const user = await client.query(query);
+    return user.rows[0];
+  } catch (err) {
+    throw err
+  };
 };
 
 const deleteAll = async () => {
+  console.log('DELETED');
   const query = 'TRUNCATE TABLE users'
   await client.query(query);
+  return 'ok';
 };
 
 module.exports = { createUser, getUser, deleteAll };

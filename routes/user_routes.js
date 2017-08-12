@@ -19,30 +19,35 @@ router.post('/register', validateParams([
     password: req.body.password,
   };
 
-  const id = await createUser(data);
-  const token = await signToken(id);
-  res.send({ token });
+  try {
+    const id = await createUser(data);
+    const token = await signToken(id);
+    res.send({ token });
+  } catch (err) {
+    console.log(err);
+    res.status(403).send({ error: 'User already exists' });
+  }
 });
 
 // POST Login
 // POST endpoint for users to login.
 // This will validate the phone number, validate the password and then 
 // respond with the user information and a session token.
-router.post('/login', validatePhoneNumber, async (req, res) => {
+router.post('/login', validateParams(['id', 'password']), validatePhoneNumber, async (req, res) => {
   const id = req.body.id;
   const password = req.body.password;
+
   const user = await getUser(id);
-  const compared = await comparePassword(password, user.password);
-  if (compared) {
-  const token = await signToken({ id: user.id });
-    res.send({ 
-      token, 
-      user: {
-        id: id
-      }
-    });
+  if (user) {
+    const compared = await comparePassword(password, user.password);
+    if (compared) {
+    const token = await signToken({ id: user.id });
+      res.send({ token });
+    } else {
+      res.sendStatus(401);
+    };
   } else {
-    res.sendStatus(403);
+    res.sendStatus(401);
   };
 });
 
