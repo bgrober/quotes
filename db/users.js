@@ -14,8 +14,7 @@ const createUser = async (data) => {
     text: 'INSERT INTO users(id, name, password) VALUES($1, $2, $3) RETURNING id',
     values: [data.id, data.name, hashedPassword],
   };
-
-  const result = await client.query(query);
+const result = await client.query(query);
   return result.rows[0];
 };
 
@@ -30,4 +29,9 @@ const getUser = async (id) => {
   return user.rows[0];
 };
 
-module.exports = { createUser, getUser };
+const deleteAll = async () => {
+  const query = 'TRUNCATE TABLE users'
+  await client.query(query);
+};
+
+module.exports = { createUser, getUser, deleteAll };
