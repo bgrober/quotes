@@ -2,7 +2,7 @@ const { use, Should, expect } = require('chai');
 const chai = require('chai');
 const chaiHttp = require('chai-http');
 const app = require('../app');
-const { getUser, deleteAll } = require('../db/users');
+const { getUser, deleteAllUsers } = require('../db/users');
 
 const should = Should();
 
@@ -54,9 +54,10 @@ describe('/user', () => {
           done();
         });
     });
+
     it('should return a token', async () => {
       // Clear db
-      await deleteAll();
+      await deleteAllUsers();
       const id = '313-234-8831';
       const noUser = await getUser(id); 
       should.not.exist(noUser);
@@ -75,20 +76,7 @@ describe('/user', () => {
       const bool = user.id === id;
       expect(bool).to.be.true;
     });
-    it('should be able to login', async () => {
-      const id = '313-234-8831';
-      const password = 'password';
-
-      const res = chai.request(app)
-        .post('/user/login')
-        .send({ id, password })
-      await res;
-      const response = res.res;
-
-      response.statusCode.should.eql(200);
-      response.body.should.have.property('token');
-      response.body.token.should.be.a('string');
-    });
+    
     it('bad password should 401 when logging in', (done) => {
       const id = '313-234-8831';
       const password = 'donthackme';
@@ -101,7 +89,8 @@ describe('/user', () => {
           done()
         });
     });
-    it('non existant user should 401', async () => {
+
+    it('non existant user should 404', async () => {
       const id = '312-224-8231';
       const password = 'thisuserdontexist';
       const noUser = await getUser(id); 
@@ -112,8 +101,38 @@ describe('/user', () => {
           .post('/user/login')
           .send({ id, password });
       } catch ({ response }) {
-        response.should.have.status(401);
+        response.should.have.status(404);
       }
+    });
+
+    it('should be able to login and get profile', async () => {
+      const id = '313-234-8831';
+      const password = 'password';
+
+      const res = chai.request(app)
+        .post('/user/login')
+        .send({ id, password })
+      await res;
+      const response = res.res;
+
+      response.statusCode.should.eql(200);
+      response.body.should.have.property('token');
+      const token = response.body.token;
+      console.log(token);
+
+      token.should.be.a('string');
+
+      let profileResponse = chai.request(app)
+        .get(`/user/profile?token=${token}`)
+        .send();
+
+      await profileResponse;
+
+      profileResponse = profileResponse.res;
+
+      profileResponse.statusCode.should.eql(200);
+      profileResponse.body.should.have.property('name');
+      profileResponse.body.name.should.eql('Raya');
     });
   });
 });

@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const { createUser, getUser } = require('../db/users');
-const { verifyToken, signToken } = require('../middlewares/verify_token');
-const { validatePhoneNumber } = require('../middlewares/validate_phone');
+const { verifyToken, signToken } = require('../middlewares/verifyToken');
+const { validatePhoneNumber } = require('../middlewares/validatePhone');
 const { validateParams } = require('../middlewares/validateParams');
 const { comparePassword } = require('../utils/utils');
 
@@ -47,24 +47,25 @@ router.post('/login', validateParams(['id', 'password']), validatePhoneNumber, a
       res.sendStatus(401);
     };
   } else {
-    res.sendStatus(401);
+    res.sendStatus(404);
   };
 });
 
-// Login User
-router.get('/user/profile', verifyToken, async (req, res) => {
+// GET User
+// If a user is not found 404.
+// Currently this just returns the name since no other user data is stored.
+// Any other user data the client requires would return here
+router.get('/profile', verifyToken, async (req, res) => {
   const id = req.body.decoded.id;
 
   try {
     const user = await getUser(id);
-    res.render('profile', {
-      user,
-      token: req.query.token,
-      said_by_link: `/said_by?token=${req.query.token}`,
-    });
+    const { name } = user;
+    console.log(name);
+    res.send({ name });
   } catch (err) {
     console.log(err);
-    res.sendStatus(500);
+    res.sendStatus(404);
   }
 });
 

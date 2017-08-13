@@ -36,11 +36,10 @@ const getUser = async (id) => {
   };
 };
 
-const deleteAll = async () => {
-  console.log('DELETED');
+const deleteAllUsers = async () => {
   const query = 'TRUNCATE TABLE users'
   await client.query(query);
   return 'ok';
 };
 
-module.exports = { createUser, getUser, deleteAll };
+module.exports = { createUser, getUser, deleteAllUsers };

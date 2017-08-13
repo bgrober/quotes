@@ -1,51 +1,100 @@
-const { Client } = require('pg');
+const { Pool } = require('pg')
 
 const connectionString = 'postgres://localhost:5432/quotes';
-const client = new Client({ connectionString });
+const pool = new Pool({ connectionString })
+const TABLE = 'quotes';
 
-client.connect();
 
 const createQuote = async (data) => {
+  const client = await pool.connect();
+
   const query = {
-    text: 'INSERT INTO quotes(text, said_by, heard_by, ts) VALUES($1, $2, $3, to_timestamp($4))',
-    values: [data.text, data.said_by, data.heard_by, Date.now() / 1000],
+    text: `INSERT INTO ${TABLE}(text, phone, name, heard_by, ts) VALUES($1, $2, $3, $4, $5)`,
+    values: [
+      data.text, 
+      data.said.phone, 
+      data.said.name,
+      JSON.stringify(data.heard),
+      data.ts
+    ]
   };
 
-  const result = await client.query(query);
-  return result.rows[0];
+  try {
+    const result = await client.query(query);
+    return result;
+  } catch (e) {
+    throw e
+  } finally {
+    client.release()
+  }
 };
 
-const getQuotes = async (id) => {
+const findSaidBy = async (data) => {
+  const { id, limit, scrollId } = data;
+  const client = await pool.connect();
+
   const query = {
-    text: 'SELECT * from quotes where said_by = $1',
-    values: [id],
+    text: `SELECT text, name, heard_by, ts FROM ${TABLE} where phone=$1 AND ts < $2 ORDER BY ts DESC LIMIT $3`,
+    values: [id, scrollId, limit]
+  }
+  try {
+    const result = await client.query(query);
+    return result.rows
+  } catch (e) {
+    throw e
+  } finally {
+    client.release()
   };
-
-  const quotes = await client.query(query);
-
-  return quotes.rows;
 };
 
-const getHeardBy = async (id) => {
+const findHeardBy = async (data) => {
+  const { id, limit, scrollId } = data;
+  const client = await pool.connect();
+
   const query = {
-    text: 'SELECT * from quotes where heard_by like $1',
-    values: [`%${id}%`],
+    text: `SELECT text, name, heard_by, ts FROM ${TABLE} where heard_by @> $1 AND ts < $2 ORDER BY ts DESC LIMIT $3`,
+    values: [JSON.stringify([{phone: id}]), scrollId, limit]
+  }
+  try {
+    const result = await client.query(query);
+    return result.rows
+  } catch (e) {
+    throw e
+  } finally {
+    client.release()
   };
-
-  const quotes = await client.query(query);
-
-  return quotes.rows;
 };
 
-const search = async (id, text) => {
+const findAll = async (data) => {
+  const { id, limit, scrollId } = data;
+  const client = await pool.connect();
+
   const query = {
-    text: 'SELECT * from quotes where (heard_by like $1 OR said_by=$1) AND text like $2',
-    values: [`%${id}%`, `%${text}%`],
+    text: `SELECT text, name, heard_by, ts FROM ${TABLE} where (heard_by @> $1 OR phone=$2) AND ts < $3 ORDER BY ts DESC LIMIT $4`,
+    values: [JSON.stringify([{phone: id}]), id, scrollId, limit]
+  }
+  try {
+    const result = await client.query(query);
+    return result.rows
+  } catch (e) {
+    throw e
+  } finally {
+    client.release()
   };
-
-  const quotes = await client.query(query);
-
-  return quotes.rows;
 };
 
-module.exports = { createQuote, getQuotes, getHeardBy, search };
+const deleteAllQuotes = async (data) => {
+  const client = await pool.connect();
+  const query = `TRUNCATE TABLE ${TABLE}`
+  console.log(query);
+  try {
+    const result = await client.query(query);
+    console.log(result);
+  } catch (e) {
+    throw e
+  } finally {
+    client.release()
+  };
+};
+
+module.exports = { createQuote, findSaidBy, findHeardBy, deleteAllQuotes };

@@ -8,7 +8,6 @@ const validatePhoneNumber = (req, res, next) => {
   try {
     phoneNumber = phoneUtil.parse(phoneNumber, 'US');
     phoneNumber = phoneUtil.format(phoneNumber, PhoneNumberFormat.INTERNATIONAL);
-    console.log('NUMBER PARSED', phoneNumber);
     req.body.phone = phoneNumber;
     next();
   } catch (err) {

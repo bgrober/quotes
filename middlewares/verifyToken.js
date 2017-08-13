@@ -3,8 +3,7 @@ const { secret } = require('../config.js');
 
 
 const verifyToken = (req, res, next) => {
-  console.log("verifying");
-  const token = req.query.token || req.body.token;
+  const token = req.query.token || req.body.token || req.headers['x-access-token'];
   if (token) {
     verify(token, secret, (err, decoded) => {
       if (err) {
@@ -19,7 +18,7 @@ const verifyToken = (req, res, next) => {
 };
 
 const signToken = (id) => {
-  const token = sign(id, secret, { expiresIn: '1h' });
+  const token = sign(id, secret);
   return token;
 };
 
