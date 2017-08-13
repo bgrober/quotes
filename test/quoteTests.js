@@ -7,7 +7,6 @@ const { deleteAllUsers } = require('../db/users');
 
 const should = Should();
 
-
 use(chaiHttp);
 
 //quote tests
@@ -130,7 +129,7 @@ describe('/quote', () => {
     it('should find all that were heard', async () => {
       const res = chai.request(app)
         .post('/user/register')
-        .send({ id: '234-154-2434', password: 'Nymeria', name: 'Arya Stark' })
+        .send({ id: '234-104-2434', password: 'Ice', name: 'Eddard Stark' })
       await res;
       const userRes = res.res;
       token = userRes.body.token
@@ -169,10 +168,10 @@ describe('/quote', () => {
   });
 
   describe('/GET /all', () => {
-    it('should find all that were heard', async () => {
+    it('should find all that were heard or said', async () => {
       const res = chai.request(app)
-        .post('/user/register')
-        .send({ id: '234-154-2434', password: 'Nymeria', name: 'Arya Stark' })
+        .post('/user/login')
+        .send({ id: '234-104-2434', password: 'Ice' })
       await res;
       const userRes = res.res;
       token = userRes.body.token
@@ -180,7 +179,7 @@ describe('/quote', () => {
       token.should.be.a('string');
 
       const qRes = chai.request(app)
-        .get(`/quote/heard?token=${token}&limit=3`)
+        .get(`/quote/all?token=${token}&limit=3`)
         .send()
       await qRes;
       const quoteRes = qRes.res;
@@ -189,11 +188,12 @@ describe('/quote', () => {
       quoteRes.body.should.have.property('quotes');
       quoteRes.body.quotes.should.have.lengthOf(3);
       quoteRes.body.should.have.property('scrollId');
+      quoteRes.body.quotes[0].text.should.eql('Winter is coming');
       const scrollId = quoteRes.body.scrollId;
 
       // Paging
       const qRes1 = chai.request(app)
-        .get(`/quote/heard?token=${token}&limit=3&scrollId=${scrollId}`)
+        .get(`/quote/all?token=${token}&limit=3&scrollId=${scrollId}`)
         .send()
       await qRes1;
       const quoteRes1 = qRes1.res;
@@ -207,6 +207,42 @@ describe('/quote', () => {
       quoteRes1.body.quotes.forEach((elem, i) => {
         elem.ts.should.not.eql(quoteRes.body.quotes[i].ts);
       });
+    });
+  });
+
+  describe('/GET /search', () => {
+    it('should find all that were heard or said where text is similar', async () => {
+      const res = chai.request(app)
+        .post('/user/login')
+        .send({ id: '234-104-2434', password: 'Ice' })
+      await res;
+      const userRes = res.res;
+      token = userRes.body.token
+      userRes.statusCode.should.eql(200);
+      token.should.be.a('string');
+
+      const qRes = chai.request(app)
+        .get(`/quote/search?token=${token}&text=winter&limit=3`)
+        .send()
+      await qRes;
+      const quoteRes = qRes.res;
+
+      quoteRes.statusCode.should.eql(200);
+      quoteRes.body.should.have.property('quotes');
+      quoteRes.body.quotes.should.have.lengthOf(1);
+      quoteRes.body.quotes[0].text.should.eql('Winter is coming');
+
+      // Paging
+      const qRes1 = chai.request(app)
+        .get(`/quote/search?token=${token}&limit=3&text=ghost`)
+        .send()
+      await qRes1;
+      const quoteRes1 = qRes1.res;
+
+      quoteRes1.statusCode.should.eql(200);
+      quoteRes1.body.should.have.property('quotes');
+      quoteRes1.body.quotes.should.have.lengthOf(3);
+      quoteRes1.body.should.have.property('scrollId');
     });
   });
 });
