@@ -124,6 +124,38 @@ const deleteAllQuotes = async (data) => {
 //         '"Jon Snow"'::jsonb,
 //         false);
 
+/*
+ *
+ * create table said(key int, name varchar, phone int);
+ *
+ * create table heard(key int, name varchar, phone int);
+ *
+ *insert into said(key, name, phone) VALUES (1, 'jon', 123);
+INSERT 0 1
+quotes=# insert into heard(key, name, phone) VALUES (1, 'arya', 223);
+INSERT 0 1
+quotes=# insert into heard(key, name, phone) VALUES (1, 'rob', 323);
+INSERT 0 1
+quotes=# select * from heard;
+ key | name | phone
+-----+------+-------
+   1 | arya |   223
+   1 | rob  |   323
+(2 rows)
+
+quotes=# insert into heard(key, name, phone) VALUES (2, 'jon', 123);
+INSERT 0 1
+quotes=# insert into said(key, name, phone) VALUES (2, 'arya', 223);
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ * select * from (select said.key, said.name as said, said.phone as saidphone, heard.name as heard, heard.phone as heardphone from said JOIN heard ON said.key=heard.key) t;
+ */
 module.exports = { 
   createQuote,
   findSaidBy,
