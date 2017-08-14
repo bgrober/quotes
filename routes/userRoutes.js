@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { createUser, getUser } = require('../db/users');
+const { updateName } = require('../db/quotes');
 const { verifyToken, signToken } = require('../middlewares/verifyToken');
 const { validatePhoneNumber } = require('../middlewares/validatePhone');
 const { validateParams } = require('../middlewares/validateParams');
@@ -22,6 +23,7 @@ router.post('/register', validateParams([
   try {
     const id = await createUser(data);
     const token = await signToken(id);
+    await updateName(data);
     res.send({ token });
   } catch (err) {
     console.log(err);

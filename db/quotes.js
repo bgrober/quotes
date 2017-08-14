@@ -1,31 +1,44 @@
-const { Pool } = require('pg')
+const { Pool } = require('pg');
+const uuid = require('uuid/v1');
 
 const connectionString = 'postgres://localhost:5432/quotes';
-const pool = new Pool({ connectionString })
-const TABLE = 'quotes';
-
+const pool = new Pool({ connectionString });
+const saidTable = 'said';
+const heardTable = 'heard';
 
 const createQuote = async (data) => {
   const client = await pool.connect();
+  const qid = uuid();
 
-  const query = {
-    text: `INSERT INTO ${TABLE}(text, phone, name, heard_by, ts) VALUES($1, $2, $3, $4, $5)`,
+  const saidQuery = {
+    text: `INSERT INTO ${saidTable}(qid, text, phone, name, ts) VALUES($1, $2, $3, $4, $5)`,
     values: [
-      data.text, 
-      data.said.phone, 
+      qid,
+      data.text,
+      data.said.phone,
       data.said.name,
-      JSON.stringify(data.heard),
-      data.ts
-    ]
+      data.ts,
+    ],
   };
 
   try {
-    const result = await client.query(query);
-    return result;
+    await client.query('BEGIN');
+    await client.query(saidQuery);
+
+    data.heard.forEach(async (obj) => {
+      const heardQuery = {
+        text: `INSERT INTO ${heardTable}(qid, phone, name) VALUES($1, $2, $3)`,
+        values: [qid, obj.phone, obj.name],
+      };
+      await client.query(heardQuery);
+    });
+    await client.query('COMMIT')
   } catch (e) {
+    await client.query('ROLLBACK')
     throw e
   } finally {
     client.release()
+    return 'ok'
   }
 };
 
@@ -34,7 +47,7 @@ const findSaidBy = async (data) => {
   const client = await pool.connect();
 
   const query = {
-    text: `SELECT text, name, heard_by, ts FROM ${TABLE} where phone=$1 AND ts < $2 ORDER BY ts DESC LIMIT $3`,
+    text: `SELECT * FROM (${saidTable} JOIN (SELECT t.qid, array_agg(t.heard) as heard, array_agg(t.heardphone) as heardphone FROM (SELECT s.qid, s.name as said, s.phone as saidphone, s.text, s.ts, h.name as heard, h.phone as heardphone FROM ${saidTable} s JOIN ${heardTable} h ON s.qid=h.qid) t GROUP BY t.qid) d ON ${saidTable}.qid=d.qid) WHERE phone=$1 AND ts < $2 ORDER BY ts DESC LIMIT $3;`,
     values: [id, scrollId, limit]
   }
   try {
@@ -52,8 +65,8 @@ const findHeardBy = async (data) => {
   const client = await pool.connect();
 
   const query = {
-    text: `SELECT text, name, heard_by, ts FROM ${TABLE} where heard_by @> $1 AND ts < $2 ORDER BY ts DESC LIMIT $3`,
-    values: [JSON.stringify([{phone: id}]), scrollId, limit]
+    text: `SELECT * FROM (${saidTable} JOIN (SELECT t.qid, array_agg(t.heard) as heard, array_agg(t.heardphone) as heardphone FROM (SELECT s.qid, s.name as said, s.phone as saidphone, s.text, s.ts, h.name as heard, h.phone as heardphone FROM ${saidTable} s JOIN ${heardTable} h ON s.qid=h.qid) t GROUP BY t.qid) d ON ${saidTable}.qid=d.qid) WHERE heardphone @> $1 AND ts < $2 ORDER BY ts DESC LIMIT $3;`,
+    values: [`{${id}}`, scrollId, limit]
   }
   try {
     const result = await client.query(query);
@@ -70,8 +83,8 @@ const findAll = async (data) => {
   const client = await pool.connect();
 
   const query = {
-    text: `SELECT text, name, heard_by, ts FROM ${TABLE} where (heard_by @> $1 OR phone=$2) AND ts < $3 ORDER BY ts DESC LIMIT $4`,
-    values: [JSON.stringify([{phone: id}]), id, scrollId, limit]
+    text: `SELECT * FROM (${saidTable} JOIN (SELECT t.qid, array_agg(t.heard) as heard, array_agg(t.heardphone) as heardphone FROM (SELECT s.qid, s.name as said, s.phone as saidphone, s.text, s.ts, h.name as heard, h.phone as heardphone FROM ${saidTable} s JOIN ${heardTable} h ON s.qid=h.qid) t GROUP BY t.qid) d ON ${saidTable}.qid=d.qid) WHERE (phone=$1 OR heardphone @> $2) AND ts < $3 ORDER BY ts DESC LIMIT $4;`,
+    values: [id, `{${id}}`, scrollId, limit]
   }
   try {
     const result = await client.query(query);
@@ -88,9 +101,10 @@ const search = async (data) => {
   const client = await pool.connect();
 
   const query = {
-    text: `SELECT text, name, heard_by, ts FROM ${TABLE} where (heard_by @> $1 OR phone=$2) AND text ILIKE $3 AND ts < $4 ORDER BY ts DESC LIMIT $5`,
-    values: [JSON.stringify([{phone: id}]), id, `%${text}%`, scrollId, limit]
+    text: `SELECT * FROM (${saidTable} JOIN (SELECT t.qid, array_agg(t.heard) as heard, array_agg(t.heardphone) as heardphone FROM (SELECT s.qid, s.name as said, s.phone as saidphone, s.text, s.ts, h.name as heard, h.phone as heardphone FROM ${saidTable} s JOIN ${heardTable} h ON s.qid=h.qid) t GROUP BY t.qid) d ON ${saidTable}.qid=d.qid) WHERE (phone=$1 OR heardphone @> $2) AND text ILIKE $3 AND ts < $4 ORDER BY ts DESC LIMIT $5;`,
+    values: [id, `{${id}}`, `%${text}%`, scrollId, limit]
   }
+  console.log(query);
 
   try {
     const result = await client.query(query);
@@ -102,12 +116,39 @@ const search = async (data) => {
   };
 };
 
+const updateName = async (data) => {
+  const client = await pool.connect();
+  const qid = uuid();
+
+  const saidQuery = {
+    text: `UPDATE ${saidTable} SET name=$1 where phone=$2;`,
+    values: [data.name, data.id],
+  };
+
+  const heardQuery = {
+    text: `UPDATE ${heardTable} SET name=$1 where phone=$2;`,
+    values: [data.name, data.id],
+  };
+
+  try {
+    await client.query('BEGIN');
+    await client.query(saidQuery);
+    await client.query(heardQuery);
+    await client.query('COMMIT')
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
+  } finally {
+    client.release()
+    return 'ok'
+  }
+};
+
 const deleteAllQuotes = async (data) => {
   const client = await pool.connect();
-  const query = `TRUNCATE TABLE ${TABLE}`
+  const query = `TRUNCATE TABLE ${saidTable}, ${heardTable};`
   try {
     const result = await client.query(query);
-    console.log(result);
   } catch (e) {
     throw e
   } finally {
@@ -115,52 +156,12 @@ const deleteAllQuotes = async (data) => {
   };
 };
 
-//Update quotes SET name='Jon Snow' where phone='234-134-2434';
-//
-// SELECT
-//     jsonb_set(
-//         '[{"phone": "234-13-2434"}]'::jsonb,
-//         '{name}',
-//         '"Jon Snow"'::jsonb,
-//         false);
-
-/*
- *
- * create table said(key int, name varchar, phone int);
- *
- * create table heard(key int, name varchar, phone int);
- *
- *insert into said(key, name, phone) VALUES (1, 'jon', 123);
-INSERT 0 1
-quotes=# insert into heard(key, name, phone) VALUES (1, 'arya', 223);
-INSERT 0 1
-quotes=# insert into heard(key, name, phone) VALUES (1, 'rob', 323);
-INSERT 0 1
-quotes=# select * from heard;
- key | name | phone
------+------+-------
-   1 | arya |   223
-   1 | rob  |   323
-(2 rows)
-
-quotes=# insert into heard(key, name, phone) VALUES (2, 'jon', 123);
-INSERT 0 1
-quotes=# insert into said(key, name, phone) VALUES (2, 'arya', 223);
- *
- *
- *
- *
- *
- *
- *
- *
- * select * from (select said.key, said.name as said, said.phone as saidphone, heard.name as heard, heard.phone as heardphone from said JOIN heard ON said.key=heard.key) t;
- */
 module.exports = { 
   createQuote,
   findSaidBy,
   findHeardBy, 
   findAll,
   search,
+  updateName,
   deleteAllQuotes 
 };

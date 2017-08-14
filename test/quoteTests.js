@@ -26,9 +26,10 @@ describe('/quote', () => {
         { name: 'Rickon Stark', phone: '234-174-2434' }
       ],
     };
-    await [...Array(10).keys()].forEach( async (i) => {
-      let obj = Object.assign({ts: (Date.now() + i)}, quoteData);
-      await createQuote(obj);
+    [...Array(10).keys()].forEach( async (i) => {
+      // Set an old timestamp
+      let obj = Object.assign({ts: (Date.now() - (10000 * i))}, quoteData);
+      const result = await createQuote(obj);
     });
   });
 
@@ -52,7 +53,6 @@ describe('/quote', () => {
       await res;
       const userRes = res.res;
       token = userRes.body.token
-      console.log('token', token);
       userRes.statusCode.should.eql(200);
       token.should.be.a('string');
 
@@ -90,7 +90,6 @@ describe('/quote', () => {
       await res;
       const userRes = res.res;
       token = userRes.body.token
-      console.log('token', token);
       userRes.statusCode.should.eql(200);
       token.should.be.a('string');
 

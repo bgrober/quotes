@@ -3,6 +3,7 @@ const chai = require('chai');
 const chaiHttp = require('chai-http');
 const app = require('../app');
 const { getUser, deleteAllUsers } = require('../db/users');
+const { createQuote, findAll, deleteAllQuotes } = require('../db/quotes');
 
 const should = Should();
 
@@ -133,6 +134,55 @@ describe('/user', () => {
       profileResponse.statusCode.should.eql(200);
       profileResponse.body.should.have.property('name');
       profileResponse.body.name.should.eql('Raya');
+    });
+  });
+
+  describe('/POST user/register', () => {
+    it('when a new user joins update there name if they have quotes already', async () => {
+      await deleteAllQuotes();
+      await deleteAllUsers();
+
+      const date = Date.now();
+      const id = '234-134-2434';
+      // Create a quote the user said and heard
+      const saidQuoteData = {
+        text: 'Ghost, to me',
+        said: { name: 'Bastard', phone: id },
+        heard: [
+          { name: 'Eddard Stark', phone: '234-104-2434' },
+        ],
+        ts: date - 10000 
+      };
+      await createQuote(saidQuoteData);
+
+      const heardQuoteData = {
+        text: 'Winter is coming',
+        said: { name: 'Eddard Stark', phone: '234-104-2434' },
+        heard: [
+          { name: 'Bastard', phone: id },
+        ],
+        ts: date - 20000 
+      };
+      await createQuote(heardQuoteData);
+
+      const allQuotes = await findAll({ id, limit: 2, scrollId: date });
+      // We guarantee order via the ts so know that the said quote is first
+      allQuotes[0].name.should.eql('Bastard'); 
+      allQuotes[1].heard[0].should.eql('Bastard'); 
+
+      const res = chai.request(app)
+        .post('/user/register')
+        .send({ id, password: 'Ghost', name: 'Jon Snow' })
+      await res;
+      const response = res.res;
+
+      response.statusCode.should.eql(200);
+      response.body.should.have.property('token');
+      response.body.token.should.be.a('string');
+
+      const updatedAllQuotes = await findAll({ id, limit: 2, scrollId: date });
+      updatedAllQuotes[0].name.should.eql('Jon Snow'); 
+      updatedAllQuotes[1].heard[0].should.eql('Jon Snow'); 
     });
   });
 });
