@@ -4,7 +4,6 @@ const { hashPassword } = require('../utils/utils.js');
 
 const connectionString = 'postgres://localhost:5432/quotes';
 const client = new Client({ connectionString });
-
 client.connect();
 
 const createUser = async (data) => {
