@@ -48,7 +48,6 @@ describe('/user', () => {
         .post('/user/register')
         .send({id: '313-234-8831', password: '', name: 'Raya'})
         .end((err, res) => {
-          console.log('returned in test', res.body);
           res.should.have.status(400);
           res.body.should.have.property('error');
           res.body.should.have.property('error').eql('Bad param password');
@@ -119,8 +118,6 @@ describe('/user', () => {
       response.statusCode.should.eql(200);
       response.body.should.have.property('token');
       const token = response.body.token;
-      console.log(token);
-
       token.should.be.a('string');
 
       let profileResponse = chai.request(app)

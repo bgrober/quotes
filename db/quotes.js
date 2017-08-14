@@ -104,7 +104,6 @@ const search = async (data) => {
     text: `SELECT * FROM (${saidTable} JOIN (SELECT t.qid, array_agg(t.heard) as heard, array_agg(t.heardphone) as heardphone FROM (SELECT s.qid, s.name as said, s.phone as saidphone, s.text, s.ts, h.name as heard, h.phone as heardphone FROM ${saidTable} s JOIN ${heardTable} h ON s.qid=h.qid) t GROUP BY t.qid) d ON ${saidTable}.qid=d.qid) WHERE (phone=$1 OR heardphone @> $2) AND text ILIKE $3 AND ts < $4 ORDER BY ts DESC LIMIT $5;`,
     values: [id, `{${id}}`, `%${text}%`, scrollId, limit]
   }
-  console.log(query);
 
   try {
     const result = await client.query(query);

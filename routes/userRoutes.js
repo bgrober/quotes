@@ -63,7 +63,6 @@ router.get('/profile', verifyToken, async (req, res) => {
   try {
     const user = await getUser(id);
     const { name } = user;
-    console.log(name);
     res.send({ name });
   } catch (err) {
     console.log(err);

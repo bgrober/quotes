@@ -3,7 +3,6 @@ const { PhoneNumberFormat, PhoneNumberUtil } = require('google-libphonenumber');
 const phoneUtil = PhoneNumberUtil.getInstance();
 
 const validatePhoneNumber = (req, res, next) => {
-  console.log('validating numbers');
   let phoneNumber = req.body.id;
   try {
     phoneNumber = phoneUtil.parse(phoneNumber, 'US');
