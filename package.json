@@ -3,8 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
+    "pretest": "npm run migrations", 
     "start": "node ./bin/www",
-    "test": "mocha"
+    "test": "mocha",
+    "migrations": "node ./db/migrations/createDatabase.js; node ./db/migrations/createQuotesTable.js; node ./db/migrations/createUserTable.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
